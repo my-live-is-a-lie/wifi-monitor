@@ -23,9 +23,19 @@ jobs:
           cache-read-only: false
 
       - name: Build Debug APK
+        id: build_step
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon --stacktrace
+          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee build_output.log
+
+      - name: Post failure log if failed
+        if: failure()
+        run: |
+          tail -n 120 build_output.log > log_summary.txt || echo "No log" > log_summary.txt
+          gh api -X POST /repos/${{ github.repository }}/commits/${{ github.sha }}/comments \
+            -f body="$(cat log_summary.txt)" || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
