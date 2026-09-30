@@ -25,7 +25,15 @@ jobs:
       - name: Build Debug APK
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleDebug --no-daemon 2>&1 | tee build.log || true
+
+      - name: Print Errors in Annotations
+        run: |
+          ERRORS=$(grep -C 3 "e: " build.log | head -n 40 || true)
+          if [ -n "$ERRORS" ]; then
+            echo "::error title=Compiler Errors::$ERRORS"
+          fi
+          tail -n 25 build.log
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
