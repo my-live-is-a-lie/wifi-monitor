@@ -26,16 +26,13 @@ jobs:
       - name: Build Debug APK
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee build.log || true
+          ./gradlew assembleDebug --no-daemon 2>&1 | tee build.log || true
 
       - name: Report Build Result
         if: always()
         run: |
-          echo "=== PWD AND BUILD DIRS ==="
-          find . -maxdepth 3 -not -path '*/.*'
-          echo "=== LAST 100 LINES OF BUILD LOG ==="
-          tail -n 100 build.log > summary.txt
-          gh issue create --title "Build Log for $(git rev-parse --short HEAD)" --body-file summary.txt || true
+          grep -C 5 -i "error:" build.log > compiler_errors.txt || grep -C 5 "e: " build.log > compiler_errors.txt || tail -n 60 build.log > compiler_errors.txt
+          gh issue create --title "Kotlin Compiler Errors $(git rev-parse --short HEAD)" --body-file compiler_errors.txt || true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
