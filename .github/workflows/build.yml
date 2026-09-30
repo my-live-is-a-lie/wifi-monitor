@@ -11,8 +11,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - uses: actions/setup-java@v5
         with:
@@ -27,34 +25,42 @@ jobs:
       - name: Build Debug APK
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon --stacktrace
+          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee build.log || true
+          mkdir -p build_logs
+          tail -n 300 build.log > build_logs/error_tail.txt
+          cp build.log build_logs/full_build.log
+          if [ ! -f "app/build/outputs/apk/debug/app-debug.apk" ] && [ -z "$(find . -name '*.apk')" ]; then
+            echo "BUILD FAILED" > build_logs/STATUS_FAILED.txt
+          fi
 
-      - name: Inspect generated APKs
-        run: |
-          echo "=== Finding all APKs ==="
-          find . -name "*.apk" -ls
-          mkdir -p apk_output
-          find . -name "*.apk" -exec cp {} apk_output/ \;
-          ls -la apk_output/
+      - name: Upload Logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Build-Logs
+          path: build_logs/*
 
-      - name: Upload Artifact
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: WiFi-Monitor-APK
-          path: apk_output/*.apk
+          path: "**/build/outputs/apk/**/*.apk"
+
+      - name: Fail if no APK
+        run: |
+          APK=$(find . -name "*.apk" | head -n 1)
+          if [ -z "$APK" ]; then
+            cat build_logs/error_tail.txt
+            exit 1
+          fi
 
       - name: Create GitHub Release with APK
         run: |
-          APK_FILE=$(find apk_output -name "*.apk" | head -n 1)
-          if [ -n "$APK_FILE" ]; then
-            gh release delete v1.0.0 --yes || true
-            git push origin :refs/tags/v1.0.0 || true
-            gh release create v1.0.0 "$APK_FILE" \
-              --title "WiFi Monitor v1.0.0" \
-              --notes "Direct APK download for WiFi Monitor."
-          else
-            echo "No APK found to release!"
-            exit 1
-          fi
+          APK_FILE=$(find . -name "*.apk" | head -n 1)
+          gh release delete v1.0.0 --yes || true
+          git push origin :refs/tags/v1.0.0 || true
+          gh release create v1.0.0 "$APK_FILE" \
+            --title "WiFi Monitor v1.0.0" \
+            --notes "Direct APK download for WiFi Monitor."
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
