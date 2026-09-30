@@ -20,9 +20,8 @@ jobs:
 
       - name: Build Debug APK
         run: |
-          if [ ! -f "./gradlew" ]; then gradle wrapper --gradle-version 8.7; fi
-          chmod +x gradlew
-          ./gradlew assembleDebug --parallel --max-workers=2 --no-daemon
+          chmod +x gradlew 2>/dev/null || echo "no wrapper yet"
+          if [ -f "./gradlew" ]; then ./gradlew assembleDebug --parallel --max-workers=2 --no-daemon; else gradle assembleDebug --parallel --max-workers=2 --no-daemon; fi
 
       - uses: actions/upload-artifact@v4
         with:
