@@ -11,7 +11,13 @@ object NotificationHelper {
     }
     fun show(context: Context, title: String, text: String) {
         val nm = context.getSystemService(NotificationManager::class.java)
-        val notif = NotificationCompat.Builder(context, CHANNEL_ID).setSmallIcon(android.R.drawable.stat_sys_wifi).setContentTitle(title).setContentText(text).setStyle(NotificationCompat.BigTextStyle().bigText(text)).setAutoCancel(true).build()
+        val notif = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setAutoCancel(true)
+            .build()
         nm.notify(1, notif)
     }
 }

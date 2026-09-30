@@ -25,16 +25,20 @@ jobs:
       - name: Build Debug APK
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon 2>&1 | tee build.log || true
+          ./gradlew assembleDebug --no-daemon
 
-      - name: Expose Errors
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WiFi-Monitor-APK
+          path: app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Create GitHub Release with APK
         run: |
-          python3 -c "
-          with open('build.log') as f:
-              lines = f.readlines()
-          errors = [line for line in lines if any(k in line.lower() for k in ['error', 'unresolved', 'failed', 'cannot', 'e: '])]
-          print('Found errors count:', len(errors))
-          for e in errors[:50]:
-              print('::warning title=BuildError::' + e.strip().replace('\n', ' '))
-          "
-          exit 1
+          gh release delete v1.0.0 --yes || true
+          git push origin :refs/tags/v1.0.0 || true
+          gh release create v1.0.0 app/build/outputs/apk/debug/app-debug.apk \
+            --title "WiFi Monitor v1.0.0" \
+            --notes "Direct APK download for WiFi Monitor."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
