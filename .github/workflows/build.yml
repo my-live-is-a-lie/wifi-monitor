@@ -27,12 +27,14 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon 2>&1 | tee build.log || true
 
-      - name: Check files and errors
+      - name: Expose Errors
         run: |
-          echo "=== Error lines from build.log ==="
-          grep -i -E "error|exception|failed" build.log | head -n 40
-          echo "=== Find all files under app/build ==="
-          find app/build -type f 2>/dev/null || echo "No app/build"
-          echo "=== Find all .apk files ==="
-          find . -name "*.apk"
+          python3 -c "
+          with open('build.log') as f:
+              lines = f.readlines()
+          errors = [line for line in lines if any(k in line.lower() for k in ['error', 'unresolved', 'failed', 'cannot', 'e: '])]
+          print('Found errors count:', len(errors))
+          for e in errors[:50]:
+              print('::warning title=BuildError::' + e.strip().replace('\n', ' '))
+          "
           exit 1
