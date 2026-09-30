@@ -28,6 +28,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add gradle/wrapper/gradle-wrapper.jar gradle/wrapper/gradle-wrapper.properties gradlew gradlew.bat .gitignore
+          git add -f gradle/wrapper/gradle-wrapper.jar gradle/wrapper/gradle-wrapper.properties
+          git add gradlew gradlew.bat
+          git add .gitignore 2>/dev/null || echo "no gitignore, skipping"
           git diff --staged --quiet || git commit -m "fix: add missing gradle-wrapper.jar"
           git push
