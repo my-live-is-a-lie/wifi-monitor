@@ -1,0 +1,6 @@
+#!/bin/sh
+# Gradle start up script for UN*X
+APP_HOME=$(dirname "$0")
+CLASSPATH=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
+if [ -n "$JAVA_HOME" ] ; then JAVACMD="$JAVA_HOME/bin/java"; else JAVACMD="java"; fi
+exec "$JAVACMD" -classpath "$CLASSPATH" org.gradle.wrapper.GradleWrapperMain "$@"
