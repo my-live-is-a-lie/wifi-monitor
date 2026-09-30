@@ -27,26 +27,12 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon 2>&1 | tee build.log || true
 
-      - name: Print Errors in Annotations
+      - name: Check files and errors
         run: |
-          ERRORS=$(grep -C 3 "e: " build.log | head -n 40 || true)
-          if [ -n "$ERRORS" ]; then
-            echo "::error title=Compiler Errors::$ERRORS"
-          fi
-          tail -n 25 build.log
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: WiFi-Monitor-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
-
-      - name: Create GitHub Release with APK
-        run: |
-          gh release delete v1.0.0 --yes || true
-          git push origin :refs/tags/v1.0.0 || true
-          gh release create v1.0.0 app/build/outputs/apk/debug/app-debug.apk \
-            --title "WiFi Monitor v1.0.0" \
-            --notes "Direct APK download for WiFi Monitor."
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          echo "=== Error lines from build.log ==="
+          grep -i -E "error|exception|failed" build.log | head -n 40
+          echo "=== Find all files under app/build ==="
+          find app/build -type f 2>/dev/null || echo "No app/build"
+          echo "=== Find all .apk files ==="
+          find . -name "*.apk"
+          exit 1
