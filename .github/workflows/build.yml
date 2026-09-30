@@ -11,8 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
@@ -23,34 +25,36 @@ jobs:
           cache-read-only: false
 
       - name: Build Debug APK
-        id: build_step
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee build_output.log
+          ./gradlew assembleDebug --no-daemon --stacktrace
 
-      - name: Post failure log if failed
-        if: failure()
+      - name: Inspect generated APKs
         run: |
-          tail -n 120 build_output.log > log_summary.txt || echo "No log" > log_summary.txt
-          gh api -X POST /repos/${{ github.repository }}/commits/${{ github.sha }}/comments \
-            -f body="$(cat log_summary.txt)" || true
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          echo "=== Finding all APKs ==="
+          find . -name "*.apk" -ls
+          mkdir -p apk_output
+          find . -name "*.apk" -exec cp {} apk_output/ \;
+          ls -la apk_output/
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: WiFi-Monitor-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: apk_output/*.apk
 
       - name: Create GitHub Release with APK
-        if: success()
         run: |
-          gh release delete v1.0.0 --yes || true
-          git tag -d v1.0.0 || true
-          git push origin :refs/tags/v1.0.0 || true
-          gh release create v1.0.0 app/build/outputs/apk/debug/app-debug.apk \
-            --title "WiFi Monitor v1.0.0" \
-            --notes "Direct APK download for WiFi Monitor."
+          APK_FILE=$(find apk_output -name "*.apk" | head -n 1)
+          if [ -n "$APK_FILE" ]; then
+            gh release delete v1.0.0 --yes || true
+            git push origin :refs/tags/v1.0.0 || true
+            gh release create v1.0.0 "$APK_FILE" \
+              --title "WiFi Monitor v1.0.0" \
+              --notes "Direct APK download for WiFi Monitor."
+          else
+            echo "No APK found to release!"
+            exit 1
+          fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
